@@ -15,6 +15,8 @@ module Utils
 
     # --- MLJ & Ensembles Libraries ---
     using MLJ
+    using MLJBase
+    using MLJModelInterface
     using MLJFlux
     using DataFrames
     using CategoricalArrays
@@ -504,6 +506,228 @@ module Utils
     # Load NeuralNetworkClassifier for Ensemble
     ANNClassifier = MLJ.@load NeuralNetworkClassifier pkg=MLJFlux verbosity=0
 
+
+
+    # ===================================================
+    # DEFINITION OF VOTINGCLASSIFIER COMPATIBLE WITH MLJ
+    # ===================================================
+
+    """
+        VotingClassifier <: Probabilistic
+
+    An ensemble classifier that combines predictions from multiple base models using voting strategies.
+
+    # Fields
+    - `models::Vector{Probabilistic}`: Vector of base probabilistic models to be combined
+    - `voting::Symbol`: Voting strategy, either `:hard` (majority vote) or `:soft` (averaged probabilities)
+    - `weights::Union{Nothing, Vector{Float64}}`: Optional weights for each model. If `nothing`, all models have equal weight. Weights are automatically normalized to sum to 1.0.
+
+    # Examples
+    ```julia
+    # Equal weights (default)
+    voting_clf = VotingClassifier(
+        models=[LogisticClassifier(), DecisionTreeClassifier()],
+        voting=:soft
+    )
+
+    # Custom weights (will be normalized automatically)
+    voting_clf = VotingClassifier(
+        models=[LogisticClassifier(), DecisionTreeClassifier(), RandomForestClassifier()],
+        voting=:hard,
+        weights=[5, 3, 2]  # Will be normalized to [0.5, 0.3, 0.2]
+    )
+    ```
+    """
+    mutable struct VotingClassifier <: Probabilistic   # Models must be probabilistic, inherited from MLJBase
+        models::Vector{Probabilistic}
+        voting::Symbol  # :hard or :soft
+        weights::Union{Nothing, Vector{Float64}}
+    end
+
+    """
+        VotingClassifier(; models=Probabilistic[], voting=:hard, weights=nothing)
+
+    Constructor for VotingClassifier.
+
+    # Arguments
+    - `models::Vector{Probabilistic}=Probabilistic[]`: Base models to combine
+    - `voting::Symbol=:hard`: Voting strategy (`:hard` or `:soft`)
+    - `weights::Union{Nothing, Vector{<:Real}}=nothing`: Weights for each model. Automatically normalized to sum to 1.0.
+
+    # Throws
+    - `AssertionError`: If voting is not `:hard` or `:soft`
+    - `AssertionError`: If weights length doesn't match models length
+    - `AssertionError`: If all weights are zero or negative
+    """
+    function VotingClassifier(; models=Probabilistic[], voting=:hard, weights=nothing)
+        @assert voting in [:hard, :soft] "The only possible labels are :hard or :soft"
+        
+        normalized_weights = nothing
+        if weights !== nothing
+            @assert length(weights) == length(models) "Number of weights must match number of models"
+            @assert all(w >= 0 for w in weights) "All weights must be non-negative"
+            
+            # Normalize weights to sum to 1.0
+            normalized_weights = Float64.(weights) ./ sum(weights)
+        end
+        
+        return VotingClassifier(models, voting, normalized_weights)
+    end
+
+    """
+        MLJModelInterface.fit(model::VotingClassifier, verbosity::Int, X, y)
+
+    Fit the VotingClassifier by training each base model on the provided data.
+
+    # Arguments
+    - `model::VotingClassifier`: The voting classifier instance
+    - `verbosity::Int`: Verbosity level for training output
+    - `X`: Training features (table format)
+    - `y`: Training target (categorical vector)
+
+    # Returns
+    - `fitresults`: Vector of trained machines (one per base model)
+    - `cache`: Nothing (no caching implemented)
+    - `report`: Named tuple with training information (number of models, voting strategy, and normalized weights)
+    """
+    function MLJModelInterface.fit(model::VotingClassifier, verbosity::Int, X, y)
+        # Train each base model
+        fitresults = []
+        for base_model in model.models
+            model_copy = deepcopy(base_model)
+            mach = machine(model_copy, X, y)
+            fit!(mach, verbosity=0)
+            push!(fitresults, mach)
+        end
+        
+        # Save necessary information
+        cache = nothing
+        report = (n_models=length(model.models), voting=model.voting, weights=model.weights)
+        
+        return fitresults, cache, report
+    end
+
+    """
+        MLJModelInterface.predict_mode(model::VotingClassifier, fitresult, Xnew)
+
+    Predict class labels using hard voting (majority vote with optional weights).
+
+    # Arguments
+    - `model::VotingClassifier`: The voting classifier instance
+    - `fitresult`: Vector of trained machines from fit
+    - `Xnew`: New data to predict on
+
+    # Returns
+    - Categorical vector of predicted class labels based on (weighted) majority voting
+
+    # Details
+    Each base model votes for a class. If weights are provided, each vote is multiplied by its 
+    corresponding weight. The class with the highest (weighted) vote count is selected.
+    """
+    function MLJModelInterface.predict_mode(model::VotingClassifier, fitresult, Xnew)
+        machines = fitresult
+        
+        # Get predictions from all models
+        predictions = [predict_mode(mach, Xnew) for mach in machines]
+        
+        # Get all unique classes
+        # all_classes = unique(vcat([unique(p) for p in predictions]...))
+        all_classes = MLJBase.classes(predictions[1])
+        n_samples = length(predictions[1])
+        n_models = length(machines)
+        
+        # Determine weights (equal if not specified)
+        weights = model.weights === nothing ? fill(1.0/n_models, n_models) : model.weights
+        
+        # Weighted voting
+        ensemble_pred = Vector{eltype(predictions[1])}(undef, n_samples)
+        
+        for i in 1:n_samples
+            # Count weighted votes for each class
+            vote_counts = Dict{eltype(predictions[1]), Float64}()
+            for class in all_classes
+                vote_counts[class] = 0.0
+            end
+            
+            for (j, pred) in enumerate(predictions)
+                vote_counts[pred[i]] += weights[j]
+            end
+            
+            # Select class with maximum weighted votes
+            ensemble_pred[i] = argmax(vote_counts)
+        end
+        
+        # return categorical(ensemble_pred)
+        return categorical(MLJBase.unwrap.(ensemble_pred))
+    end
+
+    """
+        MLJModelInterface.predict(model::VotingClassifier, fitresult, Xnew)
+
+    Predict class probabilities using the specified voting strategy.
+
+    # Arguments
+    - `model::VotingClassifier`: The voting classifier instance
+    - `fitresult`: Vector of trained machines from fit
+    - `Xnew`: New data to predict on
+
+    # Returns
+    - Vector of `UnivariateFinite` distributions representing class probabilities
+
+    # Details
+    - For `:hard` voting: Returns deterministic predictions wrapped in UnivariateFinite (with optional weights)
+    - For `:soft` voting: Averages probability distributions from all base models using weights
+    """
+    function MLJModelInterface.predict(model::VotingClassifier, fitresult, Xnew)
+        machines = fitresult
+        
+        result = if model.voting == :hard
+            # For hard voting, return deterministic predictions
+            UnivariateFinite(predict_mode(model, fitresult, Xnew))
+        else
+            # Soft voting: weighted average of probabilities
+            all_predictions = [predict(mach, Xnew) for mach in machines]
+            
+            # Get class levels
+            first_pred = all_predictions[1][1]
+            class_levels = MLJBase.classes(first_pred)
+            n_classes = length(class_levels)
+            n_samples = length(all_predictions[1])
+            n_models = length(machines)
+            
+            # Determine weights (equal if not specified)
+            weights = model.weights === nothing ? fill(1.0/n_models, n_models) : model.weights
+            
+            # Weighted average of probabilities
+            avg_probs = zeros(n_samples, n_classes)
+            for (model_idx, preds) in enumerate(all_predictions)
+                for i in 1:n_samples
+                    for (j, level) in enumerate(class_levels)
+                        avg_probs[i, j] += weights[model_idx] * pdf(preds[i], level)
+                    end
+                end
+            end
+            
+            # Create UnivariateFinite distributions with weighted averaged probabilities
+            [UnivariateFinite(class_levels, avg_probs[i, :]) for i in 1:n_samples]
+        end
+        
+        return result
+    end
+
+    """
+    Model metadata registration for VotingClassifier.
+
+    Specifies input/output types and capabilities for MLJ integration.
+    """
+    MLJModelInterface.metadata_model(VotingClassifier,
+        input_scitype=Table(Continuous),
+        target_scitype=AbstractVector{<:Finite},
+        supports_weights=false,
+        load_path="VotingClassifier"
+    )
+
+    
     function trainClassEnsemble(
         estimators::AbstractArray{Symbol,1},
         modelsHyperParameters::AbstractArray{<:Dict,1},
@@ -590,6 +814,7 @@ module Utils
                 test_metrics[numFold] = metric(y_pred, y_test)
             catch e
                 println("Error training ensemble: $e")
+                @error "Error training ensemble" exception=(e, catch_backtrace())
                 test_metrics[numFold] = 0.0
             end
         end
