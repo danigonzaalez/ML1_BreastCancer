@@ -814,7 +814,6 @@ module Utils
                 test_metrics[numFold] = metric(y_pred, y_test)
             catch e
                 println("Error training ensemble: $e")
-                @error "Error training ensemble" exception=(e, catch_backtrace())
                 test_metrics[numFold] = 0.0
             end
         end
