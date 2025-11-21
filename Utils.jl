@@ -487,7 +487,7 @@ module Utils
             mach = machine(model, MLJ.table(X_train), categorical(y_train))
             MLJ.fit!(mach, verbosity=0)
             
-            y_hat = modelType == :SVC ? MLJ.predict(mach, MLJ.table(X_test)) : mode.(MLJ.predict(mach, MLJ.table(X_test)))
+            y_hat = mode.(MLJ.predict(mach, MLJ.table(X_test)))
             
             # Eval
             results = confusionMatrix(y_hat, y_test, classes)
