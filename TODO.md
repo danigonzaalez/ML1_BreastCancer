@@ -1,0 +1,3 @@
+- [ ] Revisar los preprocessings
+- [ ] Añadir un preprocessing que no sea nada
+- [ ] Que el preprocessing se aplique en cada fold, no antes (si es usa crossvalidation)
