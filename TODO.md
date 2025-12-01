@@ -1,3 +1,6 @@
+- [X] Que el preprocessing se aplique en cada fold, no antes (si es usa crossvalidation)
 - [ ] Revisar los preprocessings
+- [ ] Revisar los warnings del `main.ipynb`
+- [ ] Valorar si la métrica empleada (accuracy en este caso) tiene sentido para este caso o es mejor emplear otra para seleccionar el mejor modelo
 - [ ] Añadir un preprocessing que no sea nada
-- [ ] Que el preprocessing se aplique en cada fold, no antes (si es usa crossvalidation)
+- [ ] Añadir más approaches
