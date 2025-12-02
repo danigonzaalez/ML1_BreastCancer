@@ -229,9 +229,9 @@ function train_and_evaluate_winner(
         val_idx = idx[1:n_val]
         tr_idx  = idx[n_val+1:end]
 
-        X_tr  = Xtr_prep[tr_idx, :]
+        X_tr  = Float32.(Xtr_prep[tr_idx, :])
         Y_tr  = Ytr[tr_idx, :]
-        X_val = Xtr_prep[val_idx, :]
+        X_val = Float32.(Xtr_prep[val_idx, :])
         Y_val = Ytr[val_idx, :]
 
         topology     = get(best_params, :topology, [10])

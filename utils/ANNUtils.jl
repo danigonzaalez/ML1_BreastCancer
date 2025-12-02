@@ -142,6 +142,9 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
         normalizeMinMax!(X_train, normParams)
         normalizeMinMax!(X_test, normParams)
 
+        X_train = Float32.(X_train)
+        X_test  = Float32.(X_test)
+
         metrics_rep = zeros(8, numExecutions)
         confMat_fold = zeros(length(classes), length(classes))
 
