@@ -83,4 +83,5 @@ function printConfusionMatrix(args...; kwargs...)
     println("PPV: $(results[5])")
     println("NPV: $(results[6])")
     println("F1-score: $(results[7])")
+    println("F2-score: $(results[8])")
 end
