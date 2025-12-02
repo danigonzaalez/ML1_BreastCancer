@@ -115,7 +115,6 @@ function run_model_cv(
             preprocessor
         )
         # metrics es Vector{Float64} (clásicos) o vector de tuplas (ANN)
-        print(metrics[8])
         f2score = metrics[8] isa Tuple ? metrics[8][1] : metrics[8]
         push!(history, f2score)
 
@@ -266,7 +265,7 @@ function train_and_evaluate_winner(
     ytr_cat = categorical(y_train_vec)
     yte_cat = categorical(y_test_vec)
 
-    mach = machine(model, Xtr_df, ytr_cat)
+    mach = machine(model, Xtr_df, ytr_cat, scitype_check_level=0)
     fit!(mach, verbosity=0)
 
     yhat_mode = mode.(predict(mach, Xte_df))

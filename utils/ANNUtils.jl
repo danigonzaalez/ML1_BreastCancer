@@ -166,5 +166,5 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
         globalConfMatrix .+= (confMat_fold ./ numExecutions)
     end
     
-    return [ (mean(metrics_fold[i,:]), std(metrics_fold[i,:])) for i in 1:8 ]..., globalConfMatrix
+    return [ (mean(metrics_fold[i,:]), std(metrics_fold[i,:])) for i in 1:8 ], globalConfMatrix
 end

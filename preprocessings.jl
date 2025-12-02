@@ -53,7 +53,7 @@ function preprocessing_2(
 
     # 2. PCA usando el modelo cargado globalmente
     pca_model = PCA_model(variance_ratio = variance_ratio)
-    mach = machine(pca_model, Xtr2)   # Xtr2 matriz; MLJ la acepta como tabla
+    mach = machine(pca_model, Xtr2, scitype_check_level=0)   # Xtr2 matriz; MLJ la acepta como tabla
     fit!(mach, verbosity=0)
 
     pca_train_tbl = MLJ.transform(mach, Xtr2)
@@ -102,7 +102,7 @@ function preprocessing_ica(
         tol     = 0.01  # Slightly relaxed tolerance usually helps
     )
     
-    ica_mach = machine(ica_model, Xtr2)
+    ica_mach = machine(ica_model, Xtr2, scitype_check_level=0)
     
     # Fit may still warn if outdim is high for the signal, but should converge
     fit!(ica_mach, verbosity = 0)
@@ -142,7 +142,7 @@ function preprocessing_lda(
     ytr_cat = categorical(ytr)
 
     lda_model = LDA_model()
-    lda_mach  = machine(lda_model, MLJ.table(Xtr_f64), ytr_cat)
+    lda_mach  = machine(lda_model, MLJ.table(Xtr_f64), ytr_cat, scitype_check_level=0)
     fit!(lda_mach, verbosity = 0)
 
     lda_train_tbl = MLJ.transform(lda_mach, MLJ.table(Xtr_f64))
