@@ -89,7 +89,7 @@ function preprocessing_ica(
     # 2) ICA vía MLJ 
     ica_model = ICA_model(
         outdim = outdim,
-        maxiter = 1000,    
+        maxiter = 10000,    
         tol     = 1e-4)
     ica_mach  = machine(ica_model, Xtr2)
     fit!(ica_mach, verbosity = 0)

@@ -8,6 +8,8 @@ function confusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{
     TN = sum(.!outputs .& .!targets)
     FP = sum(outputs .& .!targets)
     FN = sum(.!outputs .& targets)
+    beta = 2.0
+    beta2 = beta^2
     total = TP + TN + FP + FN
     
     accuracy = total == 0 ? 0.0 : (TP + TN) / total
@@ -17,6 +19,8 @@ function confusionMatrix(outputs::AbstractArray{Bool,1}, targets::AbstractArray{
     ppv = (TP + FP) == 0 ? (TN == total ? 1.0 : 0.0) : TP / (TP + FP)
     npv = (TN + FN) == 0 ? (TP == total ? 1.0 : 0.0) : TN / (TN + FN)
     fscore = (sensitivity + ppv) == 0 ? 0.0 : 2 * (sensitivity * ppv) / (sensitivity + ppv)
+    f2score = (sensitivity + ppv) == 0 ? 0.0 :
+              (1 + beta2) * sensitivity * ppv / (beta2 * ppv + sensitivity)
     
     return accuracy, error_rate, sensitivity, specificity, ppv, npv, fscore, [TN FP; FN TP]
 end
