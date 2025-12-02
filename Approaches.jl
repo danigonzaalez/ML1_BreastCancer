@@ -115,11 +115,12 @@ function run_model_cv(
             preprocessor
         )
         # metrics es Vector{Float64} (clásicos) o vector de tuplas (ANN)
-        acc = metrics[1] isa Tuple ? metrics[1][1] : metrics[1]
-        push!(history, acc)
+        print(metrics[8])
+        f2score = metrics[8] isa Tuple ? metrics[8][1] : metrics[8]
+        push!(history, f2score)
 
-        if acc > best_metric
-            best_metric = acc
+        if f2score > best_metric
+            best_metric = f2score
             best_params = params
         end
     end

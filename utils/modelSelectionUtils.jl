@@ -70,7 +70,7 @@ function modelCompilation(
     # =========================
     # Modelos clásicos (SVM, árbol, kNN)
     # =========================
-    metrics_fold     = zeros(7, numFolds)
+    metrics_fold     = zeros(8, numFolds)
     globalConfMatrix = zeros(length(classes), length(classes))
 
     for fold in 1:numFolds
@@ -132,12 +132,12 @@ function modelCompilation(
 
         # --- 5. Métricas en el fold ---
         results = confusionMatrix(y_hat, y_val, classes)
-        metrics_fold[:, fold] .= results[1:7]
-        globalConfMatrix      .+= results[8]
+        metrics_fold[:, fold] .= results[1:8]
+        globalConfMatrix      .+= results[9]
     end
 
     # Vector de medias por métrica (accuracy, error, sens, spec, ppv, npv, f1)
-    metrics_mean = [mean(metrics_fold[i, :]) for i in 1:7]
+    metrics_mean = [mean(metrics_fold[i, :]) for i in 1:8]
 
     return metrics_mean, globalConfMatrix
 end

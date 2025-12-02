@@ -129,7 +129,7 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
     outputs = oneHotEncoding(targets, classes)
     numFolds = maximum(crossValidationIndices)
     
-    metrics_fold = zeros(7, numFolds) # acc, err, sens, spec, ppv, npv, f1
+    metrics_fold = zeros(8, numFolds) # acc, err, sens, spec, ppv, npv, f1
     globalConfMatrix = zeros(length(classes), length(classes))
 
     for fold in 1:numFolds
@@ -142,7 +142,7 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
         normalizeMinMax!(X_train, normParams)
         normalizeMinMax!(X_test, normParams)
 
-        metrics_rep = zeros(7, numExecutions)
+        metrics_rep = zeros(8, numExecutions)
         confMat_fold = zeros(length(classes), length(classes))
 
         for rep in 1:numExecutions
@@ -159,12 +159,12 @@ function ANNCrossValidation(topology::AbstractArray{<:Int,1},
                 maxEpochs=maxEpochs, minLoss=minLoss, learningRate=learningRate, maxEpochsVal=maxEpochsVal)
             
             results = confusionMatrix(ann(X_test')', Y_test)
-            metrics_rep[:, rep] .= results[1:7]
-            confMat_fold .+= results[8]
+            metrics_rep[:, rep] .= results[1:8]
+            confMat_fold .+= results[9]
         end
         metrics_fold[:, fold] = mean(metrics_rep, dims=2)
         globalConfMatrix .+= (confMat_fold ./ numExecutions)
     end
     
-    return [ (mean(metrics_fold[i,:]), std(metrics_fold[i,:])) for i in 1:7 ]..., globalConfMatrix
+    return [ (mean(metrics_fold[i,:]), std(metrics_fold[i,:])) for i in 1:8 ]..., globalConfMatrix
 end

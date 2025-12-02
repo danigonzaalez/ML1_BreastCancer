@@ -78,20 +78,33 @@ function preprocessing_ica(
     ytr;
     outdim::Int = 8
 )
-    # 1) MinMax
-    Xtr2 = copy(Xtr)
-    Xte2 = copy(Xte)
+    # 1) Standardize (Z-score) instead of MinMax
+    # We use copies to avoid mutating original data if needed
+    Xtr2 = Float64.(copy(Xtr))
+    Xte2 = Float64.(copy(Xte))
 
-    params = Utils.calculateMinMaxNormalizationParameters(Xtr2)
-    Utils.normalizeMinMax!(Xtr2, params)
-    Utils.normalizeMinMax!(Xte2, params)
+    # Calculate mean and std from Training data ONLY
+    mu = mean(Xtr2, dims=1)
+    sig = std(Xtr2, dims=1)
+    
+    # Handle constant columns (std=0) to avoid NaN
+    sig[sig .== 0] .= 1.0
 
-    # 2) ICA vía MLJ 
+    # Apply (x - mean) / std
+    Xtr2 .= (Xtr2 .- mu) ./ sig
+    Xte2 .= (Xte2 .- mu) ./ sig
+
+    # 2) ICA via MLJ 
+    # Use 'tol' and 'maxiter' suitable for standardized data
     ica_model = ICA_model(
-        outdim = outdim,
-        maxiter = 10000,    
-        tol     = 1e-4)
-    ica_mach  = machine(ica_model, Xtr2)
+        outdim  = outdim,
+        maxiter = 100000,
+        tol     = 0.01  # Slightly relaxed tolerance usually helps
+    )
+    
+    ica_mach = machine(ica_model, Xtr2)
+    
+    # Fit may still warn if outdim is high for the signal, but should converge
     fit!(ica_mach, verbosity = 0)
 
     ica_train_tbl = MLJ.transform(ica_mach, Xtr2)
@@ -100,7 +113,8 @@ function preprocessing_ica(
     Xtr_ica = Tables.matrix(ica_train_tbl)
     Xte_ica = Tables.matrix(ica_test_tbl)
 
-    state = (norm_params = params, ica_mach = ica_mach)
+    # Return standardization params as state
+    state = (mean = mu, std = sig, ica_mach = ica_mach)
     return Xtr_ica, Xte_ica, state
 end
 
