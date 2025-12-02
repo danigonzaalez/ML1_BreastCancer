@@ -8,6 +8,8 @@ using CSV
 using DataFrames
 import LIBSVM, DecisionTree, NearestNeighborModels
 const PCA_model = @load PCA pkg=MultivariateStats verbosity=0
+const ICA_model = @load ICA pkg=MultivariateStats verbosity=0
+const LDA_model = @load LDA pkg=MultivariateStats verbosity=0
 
 
 #############################
