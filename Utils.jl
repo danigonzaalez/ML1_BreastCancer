@@ -17,6 +17,7 @@ using MLJ
 using MLJFlux
 using DataFrames
 using CategoricalArrays
+using MLJModelInterface
 import LIBSVM
 import DecisionTree
 import NearestNeighborModels
@@ -39,7 +40,7 @@ export oneHotEncoding,
        classifyOutputs,
        holdOut, crossvalidation,
        buildClassANN, trainClassANN, ANNCrossValidation,
-       confusionMatrix, printConfusionMatrix,
+       confusionMatrix, printConfusionMatrix, f2_score,
        modelCompilation,
        VotingClassifier, trainClassEnsemble,
        load_data, draw_results

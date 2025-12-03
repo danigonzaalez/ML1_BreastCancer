@@ -85,3 +85,19 @@ function printConfusionMatrix(args...; kwargs...)
     println("F1-score: $(results[7])")
     println("F2-score: $(results[8])")
 end
+
+function f2_score(outputs, targets)
+    # Caso 1: ya son booleanos
+    if eltype(outputs) <: Bool && eltype(targets) <: Bool
+        results = confusionMatrix(outputs, targets)
+
+    # Caso 2: categóricos / strings "true"/"false"
+    else
+        # Pasamos todo a String y definimos positivo = "true"
+        y_pred_bool = string.(outputs) .== "true"
+        y_true_bool = string.(targets) .== "true"
+        results = confusionMatrix(y_pred_bool, y_true_bool)
+    end
+
+    return results[8]   # F2-score
+end
