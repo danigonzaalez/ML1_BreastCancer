@@ -42,7 +42,7 @@ export oneHotEncoding,
        buildClassANN, trainClassANN, ANNCrossValidation,
        confusionMatrix, printConfusionMatrix, f2_score,
        modelCompilation,
-       VotingClassifier, trainClassEnsemble,
+       VotingClassifier, train_and_test_ensemble,
        load_data, draw_results
 
 end # module Utils
