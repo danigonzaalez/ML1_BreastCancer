@@ -40,7 +40,7 @@ function modelCompilation(
     preprocessor::Function
 )
     inputs, targets_raw = dataset
-    targets = string.(targets_raw)   # para MLJ
+    targets = string.(targets_raw)   # "false"/"true"
     classes = unique(targets)
     numFolds = maximum(crossValidationIndices)
 
